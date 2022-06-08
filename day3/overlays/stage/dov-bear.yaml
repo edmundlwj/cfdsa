@@ -1,0 +1,71 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dov-bear-secret
+  labels:
+    name: dov-bear-secret
+type: Opaque
+data:
+  INSTANCE_NAME: azhzIGRvdi1iZWFyIHNlY3JldA==
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dov-bear-deploy
+  labels:
+    name: dov-bear-deploy
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      name: dov-bear-po
+  template:
+    metadata:
+      name: dov-bear-po
+      labels:
+        name: dov-bear-po
+        dept: eng
+    spec:
+      volumes:
+      - name: my-vol
+        configMap:
+          name: my-cm
+      - name: my-pvc-vol
+          persistentVolumeClaim:
+            claimName: my-vol
+      containers:
+      - name : dov-bear-container
+        image: chukmunnlee/dov-bear:v2
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: cm-vol
+          mountPath: /opt/ConfigMap
+          readOnly: true
+        - name: my-pvc-vol
+          mountPath: /opt/mypvcvol
+        envFrom:
+        - secretRef:
+            name: dov-bear-secret
+        ports:
+        - name: dov-port
+          containerPort: 3000
+        livenessProbe:
+          httpGet: 
+            path: /healthz
+            port: 3000
+            scheme: HTTP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dov-bear-svc
+  labels:
+    name: dov-bear-svc
+spec:
+  type: LoadBalancer
+  selector:
+    name: dov-bear-po
+  ports:
+  - port: 80
+    targetPort: dov-port

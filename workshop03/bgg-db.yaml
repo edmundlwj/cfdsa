@@ -1,0 +1,61 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bgg-db
+  labels:
+    name: bgg-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: bgg-db
+  template:
+    metadata:
+      name: bgg-db
+      labels:
+        name: bgg-db
+        dept: eng
+    spec:
+      volumes:
+        - name: data-volume
+          persistentVolumeClaim:
+            claimName: bggapp-pvc
+      containers:
+      - name : bgg-db
+        image: stackupiss/bgg-database:v1
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: bgg-db-port
+          containerPort: 3306
+        volumeMounts:
+          - mountPath: /var/lib/mysql
+            name: data-volume
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bgg-db-svc
+  labels:
+    name: bgg-db-svc
+spec:
+  type: ClusterIP
+  selector:
+    name: bgg-db
+  ports:
+  - port: 3306
+    targetPort: bgg-db-port
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bggapp-pvc
+  labels:
+    name: bggapp-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: do-block-storage

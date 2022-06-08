@@ -1,0 +1,50 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bgg-app-v2-deploy
+  labels:
+    name: bgg-app-v2-deploy
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  selector:
+    matchLabels:
+      name: bgg-app-v2-deploy
+  template:
+    metadata:
+      name: bgg-app-v2-deploy
+      labels:
+        name: bgg-app-v2-deploy
+        dept: eng
+    spec:
+      containers:
+      - name : bgg-app-v2
+        image: stackupiss/bgg-backend:v2
+        args: ["--prefix","/v2"]
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+        envFrom:
+        - configMapRef:
+            name: bgg-app-cm
+        - secretRef:
+            name: bgg-app-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bggappv2-svc
+  labels:
+    name: bggappv2-svc
+spec:
+  type: ClusterIP
+  selector:
+    name: bgg-app-v2-deploy
+  ports:
+  - port: 8080
+    targetPort: 3000
