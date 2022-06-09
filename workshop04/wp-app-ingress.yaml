@@ -1,0 +1,85 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wp-app-cm
+  labels: 
+    name: wp-app-cm
+data:
+  WORDPRESS_DB_HOST: mycluster-mysql.wpns.svc.cluster.local
+  WORDPRESS_DB_USER: root
+  WORDPRESS_DB_NAME: mywpdb
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: wp-app-secret
+  labels: 
+    name: wp-app-secret
+type: Opaque
+data:
+  WORDPRESS_DB_PASSWORD: Y2hhbmdlaXQ=
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wp-app-deploy
+  labels:
+    name: wp-app-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: wp-app-deploy
+  template:
+    metadata:
+      name: wp-app-deploy
+      labels:
+        name: wp-app-deploy
+        dept: eng
+    spec:
+      containers:
+      - name : wp-app
+        image: wordpress:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+        envFrom:
+        - configMapRef:
+            name: wp-app-cm
+        - secretRef:
+            name: wp-app-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wpapp-svc
+  labels:
+    name: wpapp-svc
+spec:
+  type: ClusterIP
+  selector:
+    name: wp-app-deploy
+  ports:
+  - port: 8080
+    targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: wp-ing
+  labels:
+    name: wp-ing
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: wp.146.190.5.211.nip.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend: 
+          service:
+            name: wpapp-svc
+            port:
+              number: 8080
